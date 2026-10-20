@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TeamDesk</title>
+<style>body{font:18px/1.6 system-ui;max-width:680px;margin:60px auto;padding:20px}input,button{font:inherit;padding:8px}li{margin:16px 0}form{display:inline}small{color:#666}</style>
+<h1>TeamDesk</h1><p>A small issue tracker. Add a task, complete it, restart the app: your data stays.</p>
+<form method="post" action="/tickets"><label>New task <input name="title" required maxlength="200"></label><button>Add</button></form>
+<ul>{{range .}}<li>{{if .Done}}<s>{{.Title}}</s> <small>Done</small>{{else}}{{.Title}} <form method="post" action="/tickets/{{.ID}}/complete"><button>Complete</button></form>{{end}}</li>{{else}}<li>No tasks yet.</li>{{end}}</ul>
+</html>

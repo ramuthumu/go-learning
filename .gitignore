@@ -1,0 +1,9 @@
+*.db
+*.db-shm
+*.db-wal
+*.prof
+*.test
+coverage.out
+bin/
+.DS_Store
+__pycache__/

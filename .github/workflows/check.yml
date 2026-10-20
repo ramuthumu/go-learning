@@ -1,0 +1,27 @@
+name: Check guide and examples
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.x'
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '22'
+      - run: python3 scripts/build.py
+      - run: git diff --exit-code -- index.html GUIDE.md
+      - run: node --check assets/app.js
+      - run: go vet ./...
+      - run: go test -race ./...

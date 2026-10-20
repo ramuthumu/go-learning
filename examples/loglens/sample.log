@@ -1,0 +1,5 @@
+INFO server started
+INFO request complete
+ERROR database unavailable
+WARN retry scheduled
+ERROR retry exhausted
