@@ -439,11 +439,13 @@ func unique[T comparable](items []T) []T {
 func main() {
 	var buffer bytes.Buffer
 	if err := report(&buffer, "daily"); err != nil {
-		panic(err)
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 	fmt.Print(buffer.String())
 	if err := report(os.Stdout, "weekly"); err != nil {
-		panic(err)
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 	fmt.Println(unique([]string{"go", "sql", "go"}))
 }
@@ -949,19 +951,27 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"time"
 )
 
-func main() {
+func run() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	output, err := exec.CommandContext(ctx, "go", "version").CombinedOutput()
 	if err != nil {
-		fmt.Printf("go version failed: %v (%s)\n", err, output)
-		return
+		return fmt.Errorf("go version failed: %w (%s)", err, output)
 	}
 	fmt.Print(string(output))
+	return nil
+}
+
+func main() {
+	if err := run(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }
 ```
 

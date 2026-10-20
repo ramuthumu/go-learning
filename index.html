@@ -229,11 +229,13 @@ func unique[T comparable](items []T) []T {
 func main() {
 	var buffer bytes.Buffer
 	if err := report(&amp;buffer, &quot;daily&quot;); err != nil {
-		panic(err)
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 	fmt.Print(buffer.String())
 	if err := report(os.Stdout, &quot;weekly&quot;); err != nil {
-		panic(err)
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 	fmt.Println(unique([]string{&quot;go&quot;, &quot;sql&quot;, &quot;go&quot;}))
 }</code></pre></div></details>
@@ -544,19 +546,27 @@ go build -trimpath -o bin/loglens ./examples/loglens</code></pre></div><details 
 import (
 	&quot;context&quot;
 	&quot;fmt&quot;
+	&quot;os&quot;
 	&quot;os/exec&quot;
 	&quot;time&quot;
 )
 
-func main() {
+func run() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	output, err := exec.CommandContext(ctx, &quot;go&quot;, &quot;version&quot;).CombinedOutput()
 	if err != nil {
-		fmt.Printf(&quot;go version failed: %v (%s)\n&quot;, err, output)
-		return
+		return fmt.Errorf(&quot;go version failed: %w (%s)&quot;, err, output)
 	}
 	fmt.Print(string(output))
+	return nil
+}
+
+func main() {
+	if err := run(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }</code></pre></div></details>
 <aside class="pitfall"><strong>Watch for this</strong><p>Cross-compilation is not the same as verification on that platform. Record which artifacts you actually ran.</p></aside>
 <section class="checkpoint"><h3>Before you move on</h3><label class="check"><input type="checkbox" data-check="os-integration:0"><span>User input is passed as arguments, never interpolated into a shell command.</span></label><label class="check"><input type="checkbox" data-check="os-integration:1"><span>Cancellation has a visible, non-success outcome.</span></label><label class="check"><input type="checkbox" data-check="os-integration:2"><span>The binary does not depend on the source working directory.</span></label></section>

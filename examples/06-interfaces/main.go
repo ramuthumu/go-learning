@@ -27,11 +27,13 @@ func unique[T comparable](items []T) []T {
 func main() {
 	var buffer bytes.Buffer
 	if err := report(&buffer, "daily"); err != nil {
-		panic(err)
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 	fmt.Print(buffer.String())
 	if err := report(os.Stdout, "weekly"); err != nil {
-		panic(err)
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 	fmt.Println(unique([]string{"go", "sql", "go"}))
 }
