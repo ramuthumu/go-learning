@@ -1,6 +1,6 @@
 # Go From Fundamentals (For Python Developers)
 
-A simple, step-by-step, hands-on handbook for learning Go from core programming fundamentals. Every lesson contrasts Go with Python, highlights Go's golden rules, links to a runnable program in [`lessons/`](./lessons), and includes a quick self-check with a collapsible answer.
+A simple, step-by-step, hands-on handbook for learning Go from core programming fundamentals to production-ready backend development. Every lesson contrasts Go with Python, highlights Go's golden rules, links to a runnable program in [`lessons/`](./lessons), and includes a quick self-check with a collapsible answer.
 
 ---
 
@@ -17,8 +17,17 @@ A simple, step-by-step, hands-on handbook for learning Go from core programming 
 9. [Lesson 9: Interfaces (Type-Safe Duck Typing)](#lesson-9-interfaces-type-safe-duck-typing) (`lessons/09-interfaces`)
 10. [Lesson 10: Concurrency (`go` & Channels)](#lesson-10-concurrency-go--channels) (`lessons/10-concurrency`)
 11. [Lesson 11: Mini Project — Task Tracker](#lesson-11-mini-project--task-tracker) (`lessons/11-mini-project`)
-12. [Quick Cheat Sheet: Python vs. Go](#quick-cheat-sheet-python-vs-go)
-13. [Additional Reference Examples](#additional-reference-examples)
+12. [Lesson 12: Pointers & Memory](#lesson-12-pointers--memory) (`lessons/12-pointers`)
+13. [Lesson 13: Defer, Panic & Recover](#lesson-13-defer-panic--recover) (`lessons/13-defer-panic-recover`)
+14. [Lesson 14: Files, I/O & Working with the OS](#lesson-14-files-io--working-with-the-os) (`lessons/14-files-and-os`)
+15. [Lesson 15: Working with JSON](#lesson-15-working-with-json) (`lessons/15-json`)
+16. [Lesson 16: Building Web Servers & HTTP Clients](#lesson-16-building-web-servers--http-clients) (`lessons/16-http-server-and-client`)
+17. [Lesson 17: Automated Testing & Benchmarks](#lesson-17-automated-testing--benchmarks) (`lessons/17-testing`)
+18. [Lesson 18: Context & Timeouts](#lesson-18-context--timeouts) (`lessons/18-context-and-timeouts`)
+19. [Lesson 19: Generics in Modern Go](#lesson-19-generics-in-modern-go) (`lessons/19-generics`)
+20. [Lesson 20: Capstone Project — Production-Ready Microservice](#lesson-20-capstone-project--production-ready-microservice) (`lessons/20-capstone-service`)
+21. [Quick Cheat Sheet: Python vs. Go](#quick-cheat-sheet-python-vs-go)
+22. [Additional Reference Examples](#additional-reference-examples)
 
 ---
 
@@ -346,6 +355,12 @@ func (e EmailNotifier) Send(message string) string {
 }
 ```
 
+<details>
+<summary><strong>Quick Checkpoint:</strong> If a struct defines <code>PostMessage(msg string)</code> instead of <code>Send(msg string)</code>, does it satisfy <code>Notifier</code>?</summary>
+
+No! The method name, parameter types, and return types must match the interface definition exactly.
+</details>
+
 ---
 
 ## Lesson 10: Concurrency (`go` & Channels)
@@ -353,9 +368,28 @@ func (e EmailNotifier) Send(message string) string {
 * **Runnable code:** [`lessons/10-concurrency/main.go`](./lessons/10-concurrency/main.go)
 * **Run it:** `go run ./lessons/10-concurrency`
 
-Concurrency is Go's superpower:
+Concurrency is Go's standout capability:
 * **Goroutine (`go someFunc()`):** Starts a lightweight background task (takes only a few kilobytes of memory; you can run thousands at once).
 * **Channel (`chan Type`):** A safe pipe for sending messages between goroutines (`ch <- msg` to send, `msg := <-ch` to receive).
+
+```go
+results := make(chan string)
+
+// Run concurrently
+go func() {
+    results <- "Service is UP"
+}()
+
+// Receive result
+msg := <-results
+fmt.Println(msg)
+```
+
+<details>
+<summary><strong>Quick Checkpoint:</strong> What keyword turns any normal function call into an asynchronous background task in Go?</summary>
+
+The `go` keyword! For example, `go checkServer()`.
+</details>
 
 ---
 
@@ -365,6 +399,304 @@ Concurrency is Go's superpower:
 * **Run it:** `go run ./lessons/11-mini-project`
 
 Combines **Structs**, **Slices**, **Maps**, **Pointer Methods**, and **Error Handling** into a complete in-memory Task Tracker CLI.
+
+---
+
+## Lesson 12: Pointers & Memory
+
+* **Runnable code:** [`lessons/12-pointers/main.go`](./lessons/12-pointers/main.go)
+* **Run it:** `go run ./lessons/12-pointers`
+
+### Python vs. Go: Memory Model
+* **Python:** Everything is an object, and every variable holds a reference behind the scenes.
+* **Go:** Variables hold actual values by default. Go gives you explicit control over whether to pass by **value** (copy) or by **reference** (pointer).
+
+### The Two Operators
+1. **`&` (Address-Of):** Finds where a variable lives in memory.
+2. **`*` (Dereference):** Follows the pointer to read or write the actual value at that memory address.
+
+```go
+score := 42
+ptr := &score  // ptr holds memory address: 0x...
+*ptr = 100     // Updates score directly to 100!
+```
+
+> **Golden Rule — Safe Pointers:**
+> Go has pointers, but **NO pointer arithmetic** (`ptr++` is illegal). You get the performance and mutability of pointers without C/C++ memory corruption risks!
+
+<details>
+<summary><strong>Quick Checkpoint:</strong> If you pass <code>x</code> into <code>func update(val int)</code> and set <code>val = 50</code>, does the caller's <code>x</code> change?</summary>
+
+No! Go passes arguments by value (copy) by default. To change the caller's variable, pass the pointer <code>&x</code> into <code>func update(val *int)</code> and write <code>*val = 50</code>.
+</details>
+
+---
+
+## Lesson 13: Defer, Panic & Recover
+
+* **Runnable code:** [`lessons/13-defer-panic-recover/main.go`](./lessons/13-defer-panic-recover/main.go)
+* **Run it:** `go run ./lessons/13-defer-panic-recover`
+
+### Python `with` vs. Go `defer`
+In Python, you use context managers:
+```python
+with open("file.txt") as f:
+    process(f)  # f is closed automatically
+```
+In Go, you use **`defer`** immediately after acquiring a resource:
+```go
+file, err := os.Open("file.txt")
+if err != nil {
+    return err
+}
+defer file.Close() // Guaranteed to run when the surrounding function exits!
+```
+
+### LIFO Order (Last-In, First-Out)
+Multiple deferred calls run in reverse order (stacked):
+```go
+defer fmt.Println("1")
+defer fmt.Println("2")
+// Output at exit: 2 then 1
+```
+
+### `panic` and `recover`
+* `panic()`: Go's fatal error stop (like an unhandled exception in Python).
+* `recover()`: Intercepts an active panic inside a deferred function, preventing the program from crashing.
+
+<details>
+<summary><strong>Quick Checkpoint:</strong> Should you use <code>panic</code> for normal errors (like invalid user input)?</summary>
+
+No! Idiomatic Go returns <code>error</code> values for expected failures. <code>panic</code> is reserved only for fatal, unrecoverable situations (e.g. corrupted configuration or missing system dependencies).
+</details>
+
+---
+
+## Lesson 14: Files, I/O & Working with the OS
+
+* **Runnable code:** [`lessons/14-files-and-os/main.go`](./lessons/14-files-and-os/main.go)
+* **Run it:** `go run ./lessons/14-files-and-os`
+
+### Reading and Writing Files
+Go provides fast, direct standard library tools in `os` and `bufio`:
+
+```go
+// 1. One-shot write
+err := os.WriteFile("notes.txt", []byte("Hello Go!"), 0644)
+
+// 2. Line-by-line reading with bufio.Scanner
+file, err := os.Open("notes.txt")
+if err != nil {
+    return err
+}
+defer file.Close()
+
+scanner := bufio.NewScanner(file)
+for scanner.Scan() {
+    line := scanner.Text()
+    fmt.Println(line)
+}
+```
+
+### Environment Variables & Arguments
+* Arguments: `os.Args` (slice of CLI arguments, where `os.Args[0]` is the program name).
+* Environment: `os.Getenv("PORT")`.
+
+<details>
+<summary><strong>Quick Checkpoint:</strong> Why must <code>defer file.Close()</code> come AFTER <code>if err != nil</code> rather than before?</summary>
+
+Because if <code>os.Open()</code> fails, <code>file</code> will be <code>nil</code>. Calling <code>nil.Close()</code> would cause a nil-pointer panic!
+</details>
+
+---
+
+## Lesson 15: Working with JSON
+
+* **Runnable code:** [`lessons/15-json/main.go`](./lessons/15-json/main.go)
+* **Run it:** `go run ./lessons/15-json`
+
+### Python vs. Go: JSON Mapping
+* **Python:** `json.dumps(obj)` and `json.loads(text)`.
+* **Go:** `json.Marshal(v)` (Struct -> `[]byte`) and `json.Unmarshal(data, &v)` (`[]byte` -> Struct).
+
+### Struct Tags
+Struct tags map Go PascalCase fields to JSON snake_case or camelCase keys:
+```go
+type ServerConfig struct {
+    Host     string `json:"host"`
+    Port     int    `json:"port"`
+    Secret   string `json:"-"` // Omitted from JSON completely
+}
+```
+
+> **Golden Rule — Exported Fields in JSON:**
+> The `encoding/json` package can **only** read and write fields that start with a capital letter (exported)!
+
+<details>
+<summary><strong>Quick Checkpoint:</strong> What struct tag tells Go to exclude a sensitive field (like a password) from JSON serialization?</summary>
+
+<code>`json:"-"`</code>!
+</details>
+
+---
+
+## Lesson 16: Building Web Servers & HTTP Clients
+
+* **Runnable code:** [`lessons/16-http-server-and-client/main.go`](./lessons/16-http-server-and-client/main.go)
+* **Run it:** `go run ./lessons/16-http-server-and-client`
+
+Unlike Python, where you typically install external frameworks like FastAPI or Flask, Go's standard library `net/http` is production-grade out of the box!
+
+### Creating an HTTP API Endpoint
+```go
+mux := http.NewServeMux()
+
+mux.HandleFunc("/api/hello", func(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(map[string]string{"message": "Hello from Go!"})
+})
+
+http.ListenAndServe(":8080", mux)
+```
+
+### Making HTTP Client Requests
+```go
+resp, err := http.Get("https://api.example.com/status")
+if err != nil {
+    return err
+}
+defer resp.Body.Close() // Always close response body!
+
+body, _ := io.ReadAll(resp.Body)
+```
+
+<details>
+<summary><strong>Quick Checkpoint:</strong> What line must you always include right after successfully executing an <code>http.Get()</code> call?</summary>
+
+<code>defer resp.Body.Close()</code> to prevent leaking network socket connections!
+</details>
+
+---
+
+## Lesson 17: Automated Testing & Benchmarks
+
+* **Runnable code:** [`lessons/17-testing/main.go`](./lessons/17-testing/main.go) & [`lessons/17-testing/calc_test.go`](./lessons/17-testing/calc_test.go)
+* **Run tests:** `go test -v ./lessons/17-testing`
+* **Run benchmarks:** `go test -bench=. ./lessons/17-testing`
+
+Go includes a built-in test runner without needing `pytest` or `unittest`:
+* Test files end with `_test.go`.
+* Test functions start with `Test...` and accept `t *testing.T`.
+* Benchmark functions start with `Benchmark...` and accept `b *testing.B`.
+
+### Idiomatic Go: Table-Driven Testing
+```go
+func TestCalculateDiscount(t *testing.T) {
+    tests := []struct {
+        name     string
+        price    float64
+        discount int
+        expected float64
+    }{
+        {name: "20% off $100", price: 100.0, discount: 20, expected: 80.0},
+        {name: "0% off $50", price: 50.0, discount: 0, expected: 50.0},
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            got, _ := CalculateDiscount(tc.price, tc.discount)
+            if got != tc.expected {
+                t.Errorf("got %.2f, want %.2f", got, tc.expected)
+            }
+        })
+    }
+}
+```
+
+<details>
+<summary><strong>Quick Checkpoint:</strong> What command runs all tests across all packages in a Go project?</summary>
+
+<code>go test ./...</code>!
+</details>
+
+---
+
+## Lesson 18: Context & Timeouts
+
+* **Runnable code:** [`lessons/18-context-and-timeouts/main.go`](./lessons/18-context-and-timeouts/main.go)
+* **Run it:** `go run ./lessons/18-context-and-timeouts`
+
+In distributed systems and microservices, requests must not hang forever. `context.Context` is Go's standard mechanism for deadlines, timeouts, and cancellations.
+
+```go
+// Create a context that automatically expires after 100 milliseconds
+ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+defer cancel()
+
+select {
+case result := <-doWork():
+    fmt.Println("Work finished:", result)
+case <-ctx.Done():
+    fmt.Println("Aborted due to timeout:", ctx.Err())
+}
+```
+
+<details>
+<summary><strong>Quick Checkpoint:</strong> What channel closes inside a context when its timeout expires or cancel is called?</summary>
+
+<code>ctx.Done()</code>!
+</details>
+
+---
+
+## Lesson 19: Generics in Modern Go
+
+* **Runnable code:** [`lessons/19-generics/main.go`](./lessons/19-generics/main.go)
+* **Run it:** `go run ./lessons/19-generics`
+
+Python functions can accept any type dynamically. In Go 1.18+, **Generics** let you write type-safe reusable functions and data structures without runtime type assertions:
+
+```go
+// [T comparable] allows using == and !=
+func Contains[T comparable](slice []T, target T) bool {
+    for _, item := range slice {
+        if item == target {
+            return true
+        }
+    }
+    return false
+}
+
+// Works for slices of strings, ints, or custom structs!
+Contains([]int{1, 2, 3}, 2)       // true
+Contains([]string{"a", "b"}, "c") // false
+```
+
+### Constraints: `any`, `comparable`, and Unions
+* `any`: accepts absolutely any type.
+* `comparable`: types that can be compared with `==` and `!=`.
+* `int | float64`: custom union interface for numeric operations.
+
+<details>
+<summary><strong>Quick Checkpoint:</strong> What constraint is required if a generic function needs to compare items with <code>==</code> or use them as map keys?</summary>
+
+<code>comparable</code>!
+</details>
+
+---
+
+## Lesson 20: Capstone Project — Production-Ready Microservice
+
+* **Runnable code:** [`lessons/20-capstone-service/main.go`](./lessons/20-capstone-service/main.go)
+* **Run it:** `go run ./lessons/20-capstone-service`
+
+Ties all 20 lessons together into a complete, clean, production-grade Go microservice for managing home-lab devices:
+1. **Model:** `Device` struct with JSON tags (Lessons 8 & 15).
+2. **Interface:** `DeviceStore` contract (Lesson 9).
+3. **Thread-Safe Store:** `InMemoryStore` using `sync.RWMutex`, slices, maps, and pointers (Lessons 5, 6, 8, 10, 12, 13).
+4. **REST Endpoints:** `GET /health`, `GET /api/devices`, `POST /api/devices` (Lesson 16).
+5. **Robust Concurrency:** Background HTTP server with automated client requests (Lesson 10).
+6. **Graceful Shutdown:** Context timeout shutdown with zero dropped connections (Lesson 18).
 
 ---
 
@@ -385,12 +717,21 @@ Combines **Structs**, **Slices**, **Maps**, **Pointer Methods**, and **Error Han
 | **While loop** | `while cond:` | `for cond {` |
 | **Error handling** | `try: ... except:` | `res, err := fn(); if err != nil {` |
 | **Class / Struct** | `class User:` | `type User struct { ... }` |
+| **Pass by pointer** | Handled implicitly | `&val` (address) / `*val` (dereference) |
+| **Resource cleanup** | `with open(...) as f:` | `f, _ := os.Open(...); defer f.Close()` |
+| **JSON encode** | `json.dumps(obj)` | `json.Marshal(struct)` |
+| **JSON decode** | `json.loads(text)` | `json.Unmarshal(bytes, &struct)` |
+| **HTTP server** | FastAPI / Flask / Django | Standard library `net/http` |
+| **Unit tests** | `pytest` / `unittest` | Standard library `testing` (`go test ./...`) |
+| **Async / Threading** | `asyncio` / `threading` | Goroutines (`go worker()`) & Channels |
+| **Timeouts / Cancellation** | `asyncio.wait_for` | `context.WithTimeout(ctx, duration)` |
+| **Generics** | Dynamic (any type) | `func Process[T any](item T)` |
 
 ---
 
 ## Additional Reference Examples
 
-When you are ready to explore larger real-world programs and unit tests in [`examples/`](./examples):
+When you want to inspect larger reference applications and test suites in [`examples/`](./examples):
 
 ```sh
 # Run all unit tests across the repository
@@ -401,6 +742,9 @@ go run ./examples/loglens -json examples/loglens/sample.log
 
 # Sitecheck concurrent URL health checker
 go run ./examples/sitecheck https://example.com
+
+# TeamDesk SQLite API & Web app
+go run ./examples/teamdesk -db /tmp/teamdesk.db
 ```
 
 See also [`CHEATSHEET.md`](./CHEATSHEET.md) and [`EXERCISES.md`](./EXERCISES.md) for extra practice ideas.
