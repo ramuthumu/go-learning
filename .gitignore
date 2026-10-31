@@ -6,4 +6,5 @@
 coverage.out
 bin/
 .DS_Store
+.idea/
 __pycache__/

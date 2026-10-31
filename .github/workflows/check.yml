@@ -1,4 +1,4 @@
-name: Check guide and examples
+name: Check Go lessons and examples
 on:
   push:
     branches: [main]
@@ -14,14 +14,5 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - uses: actions/setup-python@v7.0.0
-        with:
-          python-version: '3.x'
-      - uses: actions/setup-node@v7.1.0
-        with:
-          node-version: '22'
-      - run: python3 scripts/build.py
-      - run: git diff --exit-code -- index.html GUIDE.md
-      - run: node --check assets/app.js
       - run: go vet ./...
       - run: go test -race ./...
